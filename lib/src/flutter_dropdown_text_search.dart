@@ -13,19 +13,15 @@ class DropdownTextSearch<T> extends StatefulWidget {
     this.controller,
     this.decorator,
     this.node,
-    this.hoverColor,
-    this.highlightColor,
-    this.tileColor,
     this.noItemFoundText,
     this.textFieldStyle,
+    this.backgroundColor,
   }) : super(key: key);
 
   final TextEditingController? controller;
   final InputDecoration? decorator;
   final String? noItemFoundText;
-  final Color? hoverColor;
-  final Color? highlightColor;
-  final Color? tileColor;
+  final Color? backgroundColor;
   final FocusScopeNode? node;
   final bool Function(String text, T item)? filterFnc;
   final double? overlayHeight;
@@ -102,6 +98,7 @@ class _DropdownTextSearch<T> extends State<DropdownTextSearch<T>> {
   Widget buildOverlay() {
     return Material(
         elevation: 10,
+        color: widget.backgroundColor,
         child: SizedBox(
           height: widget.overlayHeight,
           child: sourceData.isNotEmpty
