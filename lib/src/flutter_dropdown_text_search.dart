@@ -1,24 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class DropdownTextSearch extends StatefulWidget {
-  final TextEditingController? controller;
-  final InputDecoration? decorator;
-  final String? noItemFoundText;
-  final Color? hoverColor;
-  final Color? highlightColor;
-  final Color? tileColor;
-  final FocusScopeNode? node;
-  final bool Function(String a,String b) filterFnc;
-  final double overlayHeight;
-  final Function(String val) onChange;
-  final List<String> items;
-
-  const DropdownTextSearch({Key? key,
-    required this.onChange,
-    required this.overlayHeight,
+class DropdownTextSearch<T> extends StatefulWidget {
+  const DropdownTextSearch({
+    Key? key,
+    this.overlayHeight,
     required this.items,
-    required this.filterFnc,
+    required this.itemBuilder,
+    required this.itemToString,
+    this.filterFnc,
+    this.onChange,
     this.controller,
     this.decorator,
     this.node,
@@ -26,16 +17,31 @@ class DropdownTextSearch extends StatefulWidget {
     this.highlightColor,
     this.tileColor,
     this.noItemFoundText,
+    this.textFieldStyle,
   }) : super(key: key);
 
+  final TextEditingController? controller;
+  final InputDecoration? decorator;
+  final String? noItemFoundText;
+  final Color? hoverColor;
+  final Color? highlightColor;
+  final Color? tileColor;
+  final FocusScopeNode? node;
+  final bool Function(T a, T b)? filterFnc;
+  final double? overlayHeight;
+  final Function(T item)? onChange;
+  final List<T> items;
+  final TextStyle? textFieldStyle;
+  final Widget Function(T item) itemBuilder;
+  final String Function(T item) itemToString;
+
   @override
-  _DropdownTextSearch createState() => _DropdownTextSearch();
+  _DropdownTextSearch createState() => _DropdownTextSearch<T>();
 }
 
-class _DropdownTextSearch extends State<DropdownTextSearch> {
-
+class _DropdownTextSearch<T> extends State<DropdownTextSearch> {
   late final ScrollController scrollController;
-  late List<String> sourceData;
+  late List<T> sourceData;
   late final FocusNode focusNode;
   final layerLink = LayerLink();
   OverlayEntry? entry;
@@ -44,15 +50,15 @@ class _DropdownTextSearch extends State<DropdownTextSearch> {
   @override
   void initState() {
     scrollController = ScrollController();
-    sourceData = widget.items;
+    sourceData = widget.items.cast<T>();
     focusNode = FocusNode();
     super.initState();
-    WidgetsBinding.instance!.addPostFrameCallback((_){});
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
 
-    focusNode.addListener((){
-      if(focusNode.hasFocus){
+    focusNode.addListener(() {
+      if (focusNode.hasFocus) {
         showOverlay();
-      }else{
+      } else {
         hideOverlay();
       }
     });
@@ -66,62 +72,57 @@ class _DropdownTextSearch extends State<DropdownTextSearch> {
     super.dispose();
   }
 
-  void showOverlay(){
-    final overlay = Overlay.of(context)!;
+  void showOverlay() {
+    final overlay = Overlay.of(context);
     final renderBox = context.findRenderObject() as RenderBox;
     final size = renderBox.size;
 
     entry = OverlayEntry(
-      builder: (BuildContext context)=>Positioned(
-          width: size.width,
-          child: CompositedTransformFollower(
-              link: layerLink,
-              showWhenUnlinked: false,
-              offset: Offset(0,size.height+10),
-              child: buildOverlay()
-          )
+      builder: (BuildContext context) => Positioned(
+        width: size.width,
+        child: CompositedTransformFollower(
+          link: layerLink,
+          showWhenUnlinked: false,
+          offset: Offset(0, size.height + 10),
+          child: buildOverlay(),
+        ),
       ),
     );
 
-    overlay.insert(entry!);
+    if (entry != null) {
+      overlay?.insert(entry!);
+    }
   }
 
-  void hideOverlay(){
+  void hideOverlay() {
     entry?.remove();
     entry = null;
   }
 
-  Widget buildOverlay(){
+  Widget buildOverlay() {
     return Material(
         elevation: 10,
         child: SizedBox(
           height: widget.overlayHeight,
           child: sourceData.isNotEmpty
-              ?ListView.builder(
-            shrinkWrap: true,
-            controller: scrollController,
-            itemBuilder: (context, index){
-              return ListTile(
-                title: Text(sourceData[index]),
-                hoverColor: widget.hoverColor??Colors.grey.shade200,
-                tileColor: index==_selectedItem?(widget.highlightColor??Colors.grey.shade300):widget.tileColor,
-                onTap: () {
-                  if(widget.controller!=null){
-                    widget.controller!.text = sourceData[index];
-                  }
-                  widget.onChange.call(sourceData[index]);
-                  focusNode.unfocus();
-                },
-              );
-            },
-            itemCount: sourceData.length,
-          )
-              :Center(child: Text(widget.noItemFoundText??"No Item Found")),
-        )
-    );
+              ? ListView.builder(
+                  shrinkWrap: true,
+                  controller: scrollController,
+                  itemBuilder: (context, index) => GestureDetector(
+                    onTap: () {
+                      widget.controller?.text = widget.itemToString.call(sourceData[index]);
+                      widget.onChange?.call(sourceData[index]);
+                      focusNode.unfocus();
+                    },
+                    child: widget.itemBuilder.call(sourceData[index]),
+                  ),
+                  itemCount: sourceData.length,
+                )
+              : Center(child: Text(widget.noItemFoundText ?? "No Item Found")),
+        ));
   }
 
-  void scrollFun(){
+  void scrollFun() {
     double perBlockHeight = scrollController.position.maxScrollExtent / (sourceData.length - 1);
     double _position = _selectedItem * perBlockHeight;
     scrollController.jumpTo(
@@ -133,43 +134,37 @@ class _DropdownTextSearch extends State<DropdownTextSearch> {
   Widget build(BuildContext context) {
     return RawKeyboardListener(
       focusNode: focusNode,
-      onKey: (RawKeyEvent key){
-        if(key.isKeyPressed(LogicalKeyboardKey.arrowDown)){
-          _selectedItem = _selectedItem<sourceData.length-1?_selectedItem+1:_selectedItem;
+      onKey: (RawKeyEvent key) {
+        if (key.isKeyPressed(LogicalKeyboardKey.arrowDown)) {
+          _selectedItem = _selectedItem < sourceData.length - 1 ? _selectedItem + 1 : _selectedItem;
           scrollFun();
-        }else if(key.isKeyPressed(LogicalKeyboardKey.arrowUp)){
-          _selectedItem = _selectedItem>0?_selectedItem-1:_selectedItem;
+        } else if (key.isKeyPressed(LogicalKeyboardKey.arrowUp)) {
+          _selectedItem = _selectedItem > 0 ? _selectedItem - 1 : _selectedItem;
           scrollFun();
-        }else if(key.isKeyPressed(LogicalKeyboardKey.escape)){
-          if(widget.controller!=null){
-            widget.controller!.clear();
-          }
+        } else if (key.isKeyPressed(LogicalKeyboardKey.escape)) {
+          widget.controller?.clear();
           focusNode.unfocus();
         }
-        entry!.markNeedsBuild();
+        entry?.markNeedsBuild();
       },
       child: CompositedTransformTarget(
         link: layerLink,
         child: TextFormField(
           controller: widget.controller,
           autofocus: false,
-          onFieldSubmitted: (bg){
-            if(widget.controller!=null){
-              widget.controller!.text = sourceData[_selectedItem];
-            }
-            widget.onChange.call(sourceData[_selectedItem]);
+          onFieldSubmitted: (bg) {
+            widget.controller?.text = widget.itemToString.call(sourceData[_selectedItem]);
+            widget.onChange?.call(sourceData[_selectedItem]);
             focusNode.unfocus();
           },
           onEditingComplete: widget.node?.nextFocus,
           cursorColor: Colors.black,
-          style: Theme.of(context).textTheme.bodyText1!.copyWith(color: Colors.black),
-          onChanged: (val){
-            if(val.isNotEmpty){
-              sourceData = widget.items.where((element) =>
-                  widget.filterFnc.call(element,val)
-              ).toList();
-            }else{
-              sourceData = widget.items;
+          style: widget.textFieldStyle,
+          onChanged: (val) {
+            if (val.isNotEmpty) {
+              sourceData = (widget.items.cast<T>()).where((T element) => widget.filterFnc?.call(element, val) ?? element == val).toList();
+            } else {
+              sourceData = widget.items.cast<T>();
             }
             _selectedItem = 0;
             setState(() {});
