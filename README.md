@@ -43,8 +43,6 @@ import 'package:dropdown_text_search/src/flutter_dropdown_text_search.dart';
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
 
 ```dart
 SizedBox(

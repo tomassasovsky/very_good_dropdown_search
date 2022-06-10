@@ -27,7 +27,7 @@ class DropdownTextSearch<T> extends StatefulWidget {
   final Color? highlightColor;
   final Color? tileColor;
   final FocusScopeNode? node;
-  final bool Function(T a, T b)? filterFnc;
+  final bool Function(String text, T item)? filterFnc;
   final double? overlayHeight;
   final Function(T item)? onChange;
   final List<T> items;
@@ -39,7 +39,7 @@ class DropdownTextSearch<T> extends StatefulWidget {
   _DropdownTextSearch createState() => _DropdownTextSearch<T>();
 }
 
-class _DropdownTextSearch<T> extends State<DropdownTextSearch> {
+class _DropdownTextSearch<T> extends State<DropdownTextSearch<T>> {
   late final ScrollController scrollController;
   late List<T> sourceData;
   late final FocusNode focusNode;
@@ -160,11 +160,11 @@ class _DropdownTextSearch<T> extends State<DropdownTextSearch> {
           onEditingComplete: widget.node?.nextFocus,
           cursorColor: Colors.black,
           style: widget.textFieldStyle,
-          onChanged: (val) {
-            if (val.isNotEmpty) {
-              sourceData = (widget.items.cast<T>()).where((T element) => widget.filterFnc?.call(element, val) ?? element == val).toList();
+          onChanged: (text) {
+            if (text.isNotEmpty) {
+              sourceData = widget.items.where((T item) => widget.filterFnc?.call(text, item) ?? text == item).toList();
             } else {
-              sourceData = widget.items.cast<T>();
+              sourceData = widget.items;
             }
             _selectedItem = 0;
             setState(() {});

@@ -1,6 +1,6 @@
 name: very_good_dropdown_search
 description: A Dropdown search widget with uses a text filed as its search bar.
-version: 0.0.1+1
+version: 0.0.1+2
 homepage: https://github.com/tomassasovsky/very_good_dropdown_search
 
 environment:

@@ -1,3 +1,7 @@
+## 0.0.1+2
+
+Fixed generic Type inheritance.
+
 ## 0.0.1+1
 
 You can control how the items are drawn.
